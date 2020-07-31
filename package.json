@@ -1,0 +1,25 @@
+{
+  "name": "typechecker",
+  "version": "0.1.0",
+  "description": "A dynamic and complete type checker",
+  "main": "src/tc.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "type",
+    "check",
+    "help"
+  ],
+  "author": "Gwennan Eliezer",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "path": "^0.12.7",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
+  }
+}
