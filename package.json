@@ -4,7 +4,8 @@
   "description": "A dynamic and complete type checker",
   "main": "src/tc.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "webpack",
+    "test": "node ./tests/runTests.js"
   },
   "repository": {
     "type": "git",
@@ -21,5 +22,8 @@
     "path": "^0.12.7",
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12"
+  },
+  "dependencies": {
+    "colors": "^1.4.0"
   }
 }

@@ -1,12 +1,9 @@
 class Type {
-	constructor(arg, tc) {
-		this.subtypes = {vals : [], names : []};
-		this.subtypesName = undefined;
+	constructor(arg) {
+		this.subtypes = [];
 		//this.contentType = undefined;
 		this.content = undefined; 
 		// Contenu si le type a du contenu. Ex1 : myType = [string, number]. Ex2 : myType<T,U> = [T, U, T]
-		//this.id = tc.getNewID();
-		//this.tc = tc;
 		switch (typeof arg) {
 			case 'string':
 				this.check = (el) => (typeof el) == arg;
@@ -42,12 +39,13 @@ function scatter(str) {
 }
 
 function parseName(str) {
+	if (typeof str != "string") return {name:str,subtypes:[]};
 	if (!/^[a-zA-Z]+ ?(< ?[a-zA-Z]+( ?, ?[a-zA-Z]+)* ?>)?$/.test(str)) 
 		throw new SyntaxError('Invalid type name');
 	let splitted = str.replace(' ','').split('<');
 	return {
 		name : splitted[0],
-		subtypes : splitted[1] ? splitted.slice(0,-1).split(',') : []
+		subtypes : splitted[1] ? splitted[1].slice(0,-1).split(',') : []
 	}
 }
 
@@ -57,11 +55,18 @@ function parseStr(str, getType) {
 		inPar : false,
 		last : undefined,
 		type : undefined,
-		enum : null
+		enum : undefined
 	};
 	let stack = [];
-	addToEnum = (state) => {state.enum.subtypes.vals.push(state.type); state.type = undefined};
-	endEnum = (state) => {addToEnum(state); state.type = state.enum};
+	let addToEnum = (state) => {state.enum.push(state.type); state.type = undefined};
+	let endEnum = function(state) {
+		addToEnum(state);
+		let sEnum = state.enum;
+		state.enum = undefined;
+		state.type = new Type({
+			check : (e, tc) => sEnum.some(t => tc(e,t))
+		});
+	};
 
 	for (let el of scatter(str)) {
 		switch (el[0]) {
@@ -72,7 +77,7 @@ function parseStr(str, getType) {
 					inPar : true,
 					last : undefined,
 					type : undefined,
-					enum : null
+					enum : undefined
 				};
 				break;
 			case (')'):
@@ -86,19 +91,36 @@ function parseStr(str, getType) {
 				break;
 			case ('<'):
 				// There should be a type litteral before
-				if ('' != state.last) new Error("unexpected",el);
-				state.type.subtypes.vals = el.substring(1, el.length - 2).split(',');
+				let typeList = el.slice(1,-1).split(",");
+				if ('' != state.last) throw new Error("unexpected",el);
+				let type = state.type;
+				let oldCheck = type.check;
+				state.type.check = function(el, tc, ...args) {
+					return oldCheck.call(this, el, tc.checkClone(type.subtypes, typeList), ...args);
+				}
 				state.last = '<>';
 				break;
 			case ('|'):
 				if (!state.enum) {
-					state.enum = getType('enum', true);
-					state.enum.subtypes.vals = [];
+					state.enum = [];
 				}
 				addToEnum(state);
 				break;
 			case ('['):
-				if (!['','<>','()'].includes(state.last)) new Error("unexpected",el);
+				if (!['','<>','()'].includes(state.last)) throw new Error("unexpected "+el);
+				indexes = el.slice(1,-1).split(":");
+				// if (indexes.length > 2) throw new Error() // impossible case ?
+				let oldType = state.type;
+				let checker = 
+					/*  if  */  (indexes.length == 1) ? 
+					/* then */      (arr,tc) => tc(arr,'array') 
+					                            && (indexes[0] == '' || arr.length == indexes[0])
+					                            && arr.every(e => oldType.check(e)):
+					/* else */      (arr,tc) => tc(arr,'array') // length of 2
+					                            && (indexes[0] == '' || arr.length >= indexes[0]) 
+					                            && (indexes[1] == '' || arr.length <= indexes[1]) 
+					                            && arr.every(e => oldType.check(e));
+				state.type = new Type({check : checker});
 				break;
 			default:
 				state.type = getType(el);
@@ -114,15 +136,17 @@ function parseStr(str, getType) {
 
 function parseType(type, typeMap) {
 	if (Array.isArray(type)) {
-		if (!type.every((e) => typeMap.isValid(e))) 
-			throw new Error("The array's values aren't valid types");
-		let ret = typeMap.get('array');
-		ret.check = function (el) {
-			return Array.isArray(el) 
-			    && el.length == type.length
-			    && type.forEach((t,i) => this.tycker(el[i], t));
-		}
-		return ret;
+		type.forEach((e) => {
+			if (!typeMap.isValid(e)) throw new Error("The type '"+e+"' is not valid.");
+		});
+			
+		return new Type({
+			check : function (el) {
+				return Array.isArray(el) 
+					&& el.length == type.length
+					&& type.every((t,i) => this.tycker(el[i], t));
+			}
+		});
 	}
 	if (typeof type == 'object') {
 		for (let k in type) {
@@ -132,26 +156,27 @@ function parseType(type, typeMap) {
 				throw new Error("A key is in double (optionnal and non-optionnal).");
 		}
 		let ret = typeMap.get('object');
-		ret.check = function (el) {
-			if (typeof el != "object") return false;
-			for (let name in type) {
-				let propType = type[name];
-				if (name.slice(-1) == '?') {
-					name = name.slice(0,-1);
-					if (!el.hasOwnProperty(name)) continue;
+		return new Type({
+			check : function (el) {
+				if (typeof el != "object") return false;
+				for (let name in type) {
+					let propType = type[name];
+					if (name.slice(-1) == '?') {
+						name = name.slice(0,-1);
+						if (!el.hasOwnProperty(name)) continue;
+					}
+					if (!this.tycker(el[name], propType)) {
+						return false;
+					}
 				}
-				if (!this.tycker(el[name], propType)) {
-					return false;
+				for (let key in el) {
+					if (!type.hasOwnProperty(key) && !type.hasOwnProperty(key+'?')) {
+						return false;
+					}
 				}
+				return true;
 			}
-			for (let key in el) {
-				if (!type.hasOwnProperty(key) && !type.hasOwnProperty(key+'?')) {
-					return false;
-				}
-			}
-			return true;
-		}
-		return ret;
+		});
 	}
 	if (typeof type == 'function') {
 		return new Type(type);
@@ -161,6 +186,7 @@ function parseType(type, typeMap) {
 		if (type == undefined) throw new Error("No type matching the given string.");
 		return type;
 	}
+	return typeMap.get("any");
 }
 
 module.exports = {

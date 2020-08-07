@@ -2,17 +2,8 @@ const reserved = {
 	/********* specific types **********/
 		'any' : {check:() => true},
 		'unknown' : {check:() => {throw new Error('This type is unknown')}},
-		'enum' : {check:(e,tc) => this.subtypes.some(t => tc(e,t))},
-		'array' : {
-			check : (el) => (
-				Array.isArray(el) // is an array 
-				//&& this.caracs.bounds.some((bound) => (
-				//	!bound.start || bound.start <= el.length
-				//	&& !bound.end || bound.end >= el.length
-				//)) // is of good length
-				//&& el.every((val, i) => this.checker(val, this.subtypes[i])) // Everyone is of good type
-			)
-		},
+		//'enum' : {check:(e,tc) => this.subtypes.some(t => tc(e,t))},
+		'array' : {check : (el) => Array.isArray(el)},
 	/*** primitives and basic types ***/
 		'undefined' : 'undefined',
 		'number' : 'number',
