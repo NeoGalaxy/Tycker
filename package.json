@@ -1,6 +1,6 @@
 {
   "name": "typechecker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A dynamic and complete type checker",
   "main": "src/tc.js",
   "scripts": {

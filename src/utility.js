@@ -53,7 +53,7 @@ function parseStr(str, getType) {
 	//let s = {global : 0, par : 1};
 	let state = {
 		inPar : false,
-		last : undefined,
+		last : '',
 		type : undefined,
 		enum : undefined
 	};
@@ -64,7 +64,7 @@ function parseStr(str, getType) {
 		let sEnum = state.enum;
 		state.enum = undefined;
 		state.type = new Type({
-			check : (e, tc) => sEnum.some(t => tc(e,t))
+			check : function(...args) {return sEnum.some(t => t.check(...args))}
 		});
 	};
 
@@ -75,7 +75,7 @@ function parseStr(str, getType) {
 				stack.push(state);
 				state = {
 					inPar : true,
-					last : undefined,
+					last : '',
 					type : undefined,
 					enum : undefined
 				};
@@ -95,8 +95,8 @@ function parseStr(str, getType) {
 				if ('' != state.last) throw new Error("unexpected",el);
 				let type = state.type;
 				let oldCheck = type.check;
-				state.type.check = function(el, tc, ...args) {
-					return oldCheck.call(this, el, tc.checkClone(type.subtypes, typeList), ...args);
+				state.type.check = function(el, ...args) {
+					return oldCheck.call(this, el, this.tycker.checkClone(type.subtypes, typeList), ...args);
 				}
 				state.last = '<>';
 				break;
@@ -107,19 +107,19 @@ function parseStr(str, getType) {
 				addToEnum(state);
 				break;
 			case ('['):
-				if (!['','<>','()'].includes(state.last)) throw new Error("unexpected "+el);
+				if (!['','<>','()'].includes(state.last)) throw new Error(`last : ${state.last} -- unexpected `+el);
 				indexes = el.slice(1,-1).split(":");
 				// if (indexes.length > 2) throw new Error() // impossible case ?
 				let oldType = state.type;
 				let checker = 
 					/*  if  */  (indexes.length == 1) ? 
-					/* then */      (arr,tc) => tc(arr,'array') 
-					                            && (indexes[0] == '' || arr.length == indexes[0])
-					                            && arr.every(e => oldType.check(e)):
-					/* else */      (arr,tc) => tc(arr,'array') // length of 2
-					                            && (indexes[0] == '' || arr.length >= indexes[0]) 
-					                            && (indexes[1] == '' || arr.length <= indexes[1]) 
-					                            && arr.every(e => oldType.check(e));
+					/* then */     (arr,tc) => tc(arr,'array') 
+					                           && (indexes[0] == '' || arr.length == indexes[0])
+					                           && arr.every(e => oldType.check(e)):
+					/* else */     (arr,tc) => tc(arr,'array') // length of 2
+					                           && (indexes[0] == '' || arr.length >= indexes[0]) 
+					                           && (indexes[1] == '' || arr.length <= indexes[1]) 
+					                           && arr.every(e => oldType.check(e));
 				state.type = new Type({check : checker});
 				break;
 			default:
@@ -183,7 +183,7 @@ function parseType(type, typeMap) {
 	}
 	if (typeof type == 'string') {
 		type = typeMap.get(type);
-		if (type == undefined) throw new Error("No type matching the given string.");
+		if (type == undefined) throw new Error("No type matching "+type);
 		return type;
 	}
 	return typeMap.get("any");
@@ -192,5 +192,6 @@ function parseType(type, typeMap) {
 module.exports = {
 	parseName: parseName,
 	parseType: parseType,
+	parseStr: parseStr,
 	Type: Type
 }

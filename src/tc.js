@@ -1,6 +1,6 @@
 "use strict"
 const reserved = require('./reserved');
-const {parseName, parseType, Type} = require('./utility');
+const {parseName, parseType, parseStr, Type} = require('./utility');
 /*
 .cast
 */
@@ -154,16 +154,11 @@ let properties = {
 		let typeName = undefined;
 		let subtypes = [];
 		if (typeof typeObject == 'string') {
-			let parsed = parseName(typeObject);
-			typeName = parsed.name;
-			subtypes = parsed.subtypes;
-			type = this.typeMap.get(typeName);
+			type = parseStr(typeObject, (t) => this.typeMap.get(t));
 		} else {
 			let typeName = this.find(typeObject);
 			if (typeof typeName == 'string') {
 				type = this.typeMap.get(typeName);
-			} else {
-				parseType(typeObject,this.typeMap);
 			}
 		}
 		if(type === undefined) {
@@ -179,7 +174,7 @@ let properties = {
 		if (type == undefined) {
 			throw new Error(`Unknown type "${typeName}"`);
 		}
-		if (!type.check.call(self,arg)) {
+		if (!type.check.call(self,arg,self.tycker)) {
 			if (exception instanceof Error){
 				throw exception;
 			}
