@@ -1,6 +1,6 @@
 {
   "name": "tycker",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A dynamic and complete type checker",
   "main": "src/tc.js",
   "scripts": {

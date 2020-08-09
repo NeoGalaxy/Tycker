@@ -156,7 +156,7 @@ let properties = {
 			let newArg = type.cast(arg, this);
 			if (newArg !== undefined) arg = newArg;
 		}
-		if (!type.check.call(self,arg,self.tycker)) {
+		if (!type.check.call(type.editor(this),arg,this)) {
 			if (exception instanceof Error){
 				throw exception;
 			}

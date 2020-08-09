@@ -13,7 +13,7 @@ class TypeEditor {
 			} else {
 				let old = self.check;
 				self.check = function(el, arg2) {
-					return old.call(self, el, arg2) && checker.call(self, el, arg2);
+					return old.call(this, el, arg2) && checker.call(this, el, arg2);
 				}
 			}
 		} else throw new TypeError('Checker should be a funtion.');
@@ -63,11 +63,12 @@ class Type {
 		this.casters.push({type : type, func : cast});
 	}
 	cast(elem, tc, exception) {
-		if (this.check.call(null,elem,tc)) return elem;
+		let editor = this.editor(tc);
+		if (this.check.call(editor,elem,tc)) return elem;
 		for (let caster of this.casters) {
 			if (!tc(elem,caster.type)) continue;
-			let res = caster.func.call(null,elem,tc);
-			if (this.check.call(null,res,tc)) return res;
+			let res = caster.func.call(editor,elem,tc);
+			if (this.check.call(editor,res,tc)) return res;
 		}
 		if (this.casters.length == 0) console.log(new Error('Casting warning : no casting function in type'));
 		if (exception instanceof Error){
