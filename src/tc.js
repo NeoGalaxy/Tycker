@@ -132,7 +132,7 @@ let properties = {
 	},
 	match : function(el, matches, fallback) {
 		for (let config of matches) {
-			if (this.check(el, config.type))
+			if (this.check(el, config.type, false, confing.cast == true))
 				return config.exe(el);
 		}
 		if (fallback instanceof Error) throw fallback;
@@ -140,20 +140,21 @@ let properties = {
 	},
 	check : function(arg, typeObject, exception = false, castBefore = false){
 		let type = parseType(typeObject, this.typeMap);
-		let typeName = undefined;
+		//let typeName = undefined;
 		//let subtypes = [];
 		if(type === undefined) {
 			console.log(this);
 			console.log(typeof(typeObject),':',typeObject);
 			throw new Error('Unable to find type or create anonymous type from above object');
 		}
-		let self = {
-			tycker : this//.checkClone(type.subtypes, subtypes),
-			//subtypes : new Array(subtypes)
-		}
-		if (!type) type = this.typeMap(typeName);
+		let self = {}
+		//if (!type) type = this.typeMap(typeName);
 		if (type == undefined) {
-			throw new Error(`Unknown type "${typeName}"`);
+			throw new Error(`Should not occur. Please contact me.`);
+		}
+		if (castBefore) {
+			let newArg = type.cast(arg, this);
+			if (newArg !== undefined) arg = newArg;
 		}
 		if (!type.check.call(self,arg,self.tycker)) {
 			if (exception instanceof Error){
@@ -168,7 +169,7 @@ let properties = {
 		return type.cast(arg,this,exception);
 	},
 	addCast : function(typename,cast,typecase = 'any') {
-		this.typeMap.get(typename).addCast(cast, typeName);
+		this.typeMap.get(typename).addCast(cast, typename);
 	},
 	clone: function() {
 		let newFunc = function(arg, type, exception) {
