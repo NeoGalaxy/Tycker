@@ -1,9 +1,43 @@
+class TypeEditor {
+	constructor(type, tycker) {
+		if (typeof tycker != 'function') 
+			throw new Error('Type editor should not be created without a valid Tycker instance.');
+		this.__type__ = type;
+		this.__tycker__ = tycker;
+	}
+	setChecker(checker, overwriteChecker = false) {
+		let self = this.__type__;
+		if (typeof checker == 'function') {
+			if (overwriteChecker) {
+				self.check = checker;
+			} else {
+				let old = self.check;
+				self.check = function(el, arg2) {
+					return old.call(self, el, arg2) && checker.call(self, el, arg2);
+				}
+			}
+		} else throw new TypeError('Checker should be a funtion.');
+		return this;
+	}
+	check(el, exception = false, castBefore = false) {
+		return this.__tycker__.check(el, this.__type__, exception, castBefore);
+	}
+	addCast(arg1, arg2) {
+		let typeCase = arg2 ? arg1 : 'any';
+		let caster = arg2 ? arg2 : arg1;
+		this.__type__.addCast(caster,typeCase);
+		return this;
+	}
+	cast(el) {
+		return this.__type__.cast(el, this.__tycker__);
+	}
+}
+
 class Type {
 	constructor(arg) {
 		this.subtypes = [];
-		//this.contentType = undefined;
-		this.content = undefined; 
-		// Contenu si le type a du contenu. Ex1 : myType = [string, number]. Ex2 : myType<T,U> = [T, U, T]
+		this.casters = [];
+		//this.content = undefined; // Useless ?
 		switch (typeof arg) {
 			case 'string':
 				this.check = (el) => (typeof el) == arg;
@@ -14,12 +48,32 @@ class Type {
 			case 'object':
 				if (arg.hasOwnProperty('subtypes')) this.subtypes = arg.subtypes;
 				if (arg.hasOwnProperty('check')) this.check = arg.check;
-				if (arg.hasOwnProperty('content')) this.content = arg.content;
+				if (arg.hasOwnProperty('casters')) this.casters = arg.casters;
+				//if (arg.hasOwnProperty('content')) this.content = arg.content;
 				break;
 			default:
 				throw new TypeError("Can't create type from given argument.");
 				break;
 		}
+	}
+	editor(tycker) {
+		return new TypeEditor(this,tycker);
+	}
+	addCast(cast,type) {
+		this.casters.push({type : type, func : cast});
+	}
+	cast(elem, tc, exception) {
+		if (this.check.call(null,elem,tc)) return elem;
+		for (let caster of this.casters) {
+			if (!tc(elem,caster.type)) continue;
+			let res = caster.func.call(null,elem,tc);
+			if (this.check.call(null,res,tc)) return res;
+		}
+		if (this.casters.length == 0) console.log(new Error('Casting warning : no casting function in type'));
+		if (exception instanceof Error){
+			throw exception;
+		}
+		return exception;
 	}
 }
 
@@ -124,6 +178,7 @@ function parseStr(str, getType) {
 				break;
 			default:
 				state.type = getType(el);
+				if (state.type == undefined) throw new Error(`The type ${el} does not exist.`)
 				break;
 		}
 	}
@@ -135,6 +190,12 @@ function parseStr(str, getType) {
 }
 
 function parseType(type, typeMap) {
+	if (type instanceof Type) {
+		return type;
+	}
+	if (type instanceof TypeEditor) {
+		return type.__type__;
+	}
 	if (Array.isArray(type)) {
 		type.forEach((e) => {
 			if (!typeMap.isValid(e)) throw new Error("The type '"+e+"' is not valid.");
@@ -182,11 +243,19 @@ function parseType(type, typeMap) {
 		return new Type(type);
 	}
 	if (typeof type == 'string') {
-		type = typeMap.get(type);
-		if (type == undefined) throw new Error("No type matching "+type);
-		return type;
+		try {
+			var res = parseStr(type, (t) => typeMap.get(t));
+		} catch(e) {
+			console.log(e);
+			throw new Error("No type matching "+type);
+		}
+		if (res == undefined) {
+			throw new Error("Should not occur - please contact me");
+		}
+		return res;
 	}
-	return typeMap.get("any");
+	throw new TypeError('Invalid type element.');
+	//return typeMap.get("any");
 }
 
 module.exports = {

@@ -8,6 +8,9 @@ const Tycker = function(arg, type, exception) {
 	if (arg === undefined && type === undefined && exception === undefined){
 		return Tycker.clone();
 	}
+	if (type === undefined && exception === undefined){
+		return Tycker.get(arg);
+	}
 	return Tycker.check(arg, type, exception); 
 }
 
@@ -16,74 +19,66 @@ let methodList = ['find','isValid','def','match','check','clone','checkClone'];
 // Not called 'typeMap' to avoid errors from using typeMap instead of this.typeMap in methods
 let wholeTypeMap = {
 	content : new Map(),
-	nameToType : new Map(),
-	typeToName : new Map(), 
+	//nameToType : new Map(),
+	//typeToName : new Map(), 
 	get : function(name, getOriginal) {
 		let res = this.content.get(name);
 		if (getOriginal) return res;
 		if (res) res = new Type(res);
 		return res;
 	},
-	find : function(type) {
+	/*find : function(type) {
 		let typename = (typeof type) == 'string' ?
 		           type :
 		           this.name(type);
 		if (!this.content.has(typename)) return undefined;
 		return typename;
-	},
+	},*/
 	isValid : function(type) {
-		if (this.find(type) !== undefined) {
-			return true;
+		if (type instanceof Type || type instanceof TypeEditor) return true;
+		switch (typeof type) {
+			case 'string':
+				let parsed = parseName(type);
+				return this.isValid(parsed.name) && parsed.subtypes.every((el) => this.isValid(el));
+			case 'object':
+				for (let t in type) {
+					if (!this.isValid(t)) return false;
+				}
+				return true;
+			case 'function': // Assumed to be a class
+				return true;
+			default:
+				return false;
 		}
-		/*if (Array.isArray(type)) {
-			return type.every((t) => this.isValid(t));
-		} */
-		if (typeof type == 'object') {
-			for (let t in type) {
-				if (!this.isValid(t)) return false;
-			}
-			return true;
-		} if (typeof type == 'string' && type.includes("<")) {
-			let parsed = parseName(type);
-			return this.isValid(parsed.name) && parsed.subtypes.every((el) => this.isValid(el))
-		}
-		return false;
 	},
-	type : function(name) {
+	/*type : function(name) {
 		return this.nameToType.get(name);
 	},
 	name : function(type) {
 		return this.typeToName.get(type);
-	},
+	},*/
 	set : function(name, type, force) {
-		if (typeof name != 'string') {
+		/*if (typeof name != 'string') {
 			this.addtype(name.toString(), name);
 			name = name.toString();
-		}
+		}*/
 		if (!force && this.content.has(name)) throw new Error('Type name already taken.');
 		return this.content.set(name, type);
 	},
-	addtype : function(name, type) {
+	/*addtype : function(name, type) {
 		this.nameToType.set(name,type);
 		this.typeToName.set(type,name);
-	},
-	/*sub : function(subtypes) {
-		let copy = this.copy();
-		if (subtypes) subtypes.forEach(s => {
-			copy.set(s, new Type(this.get('unknown')));
-		});
-		return copy;
 	},*/
 	copy : function() {
 		return {
-			typeToName : new Map(this.typeToName), 
-			nameToType : new Map(this.nameToType), 
+			//typeToName : new Map(this.typeToName), 
+			//nameToType : new Map(this.nameToType), 
 			content : new Map(this.content),
 			get : this.get,
-			find : this.find,
+			//find : this.find,
 			isValid : this.isValid,
-			type : this.type,
-			name : this.name,
+			//type : this.type,
+			//name : this.name,
 			set : this.set,
 			addtype : function(name, type) {
 				this.nameToType.set(name,type);
@@ -116,30 +111,24 @@ let wholeTypeMap = {
 
 let properties = {
 	typeMap : wholeTypeMap,
-	find : function(type) {
+	/*find : function(type) {
 		return this.typeMap.find(type);
+	},*/
+	get : function (type) {
+		return this.typeMap.get(type,true).editor(this);
 	},
 	isValid : function(type) {
 		return this.typeMap.isValid(type);
 	},
-	def : function(completeName, typeDescr, checker, overwriteChecker = false) {
+	def : function(completeName, typeDescr = 'any') {
 		let {name, subtypes} = parseName(completeName);
 		let type = parseType(typeDescr, this.typeMap.checkCopy(subtypes));
 		type.subtypes = subtypes;
-		if (typeof checker == 'function') {
-			if (overwriteChecker) {
-				type.check = checker;
-			} else {
-				let old = type.check;
-				type.check = function(el, arg2) {
-					old.call(this, el, arg2) && checker.call(this, el, arg2);
-				}
-			}
-		}
-		if (typeof typeDescr == "function") {
+		/*if (typeof typeDescr == "function") {
 			this.typeMap.addtype(name, typeDescr);
-		}
+		}*/
 		this.typeMap.set(name, type);
+		return type.editor(this);
 	},
 	match : function(el, matches, fallback) {
 		for (let config of matches) {
@@ -149,26 +138,18 @@ let properties = {
 		if (fallback instanceof Error) throw fallback;
 		return fallback;
 	},
-	check : function(arg, typeObject, exception = false){
-		let type = undefined;
+	check : function(arg, typeObject, exception = false, castBefore = false){
+		let type = parseType(typeObject, this.typeMap);
 		let typeName = undefined;
-		let subtypes = [];
-		if (typeof typeObject == 'string') {
-			type = parseStr(typeObject, (t) => this.typeMap.get(t));
-		} else {
-			let typeName = this.find(typeObject);
-			if (typeof typeName == 'string') {
-				type = this.typeMap.get(typeName);
-			}
-		}
+		//let subtypes = [];
 		if(type === undefined) {
 			console.log(this);
 			console.log(typeof(typeObject),':',typeObject);
 			throw new Error('Unable to find type or create anonymous type from above object');
 		}
 		let self = {
-			tycker : this.checkClone(type.subtypes, subtypes),
-			subtypes : new Array(subtypes)
+			tycker : this//.checkClone(type.subtypes, subtypes),
+			//subtypes : new Array(subtypes)
 		}
 		if (!type) type = this.typeMap(typeName);
 		if (type == undefined) {
@@ -182,10 +163,20 @@ let properties = {
 		}
 		else return true
 	},
+	cast : function(arg, typeObject, exception = undefined) {
+		let type = parseType(typeObject);
+		return type.cast(arg,this,exception);
+	},
+	addCast : function(typename,cast,typecase = 'any') {
+		this.typeMap.get(typename).addCast(cast, typeName);
+	},
 	clone: function() {
 		let newFunc = function(arg, type, exception) {
 			if (arg === undefined && type === undefined && exception === undefined){
 				return newFunc.clone();
+			}
+			if (type === undefined && exception === undefined){
+				return newFunc.get(arg);
 			}
 			return newFunc.check(arg, type, exception); 
 		}
@@ -201,6 +192,9 @@ let properties = {
 			if (arg === undefined && type === undefined && exception === undefined){
 				throw new Error("A checkClone can't be cloned");
 			}
+			if (type === undefined && exception === undefined){
+				return newFunc.get(arg);
+			}
 			return newFunc.check(arg, type, exception); 
 		}
 		newFunc.find = this.find;
@@ -214,9 +208,9 @@ let properties = {
 
 for (let name in reserved) {
 	properties.typeMap.content.set(name, new Type(reserved[name]));
-	let type = (typeof reserved[name]) == "object" ? name : reserved[name];
-	properties.typeMap.nameToType.set(name,type);
-	properties.typeMap.typeToName.set(type,name);
+	//let type = (typeof reserved[name]) == "object" ? name : reserved[name];
+	//properties.typeMap.nameToType.set(name,type);
+	//properties.typeMap.typeToName.set(type,name);
 }
 
 for (let name in properties) {
