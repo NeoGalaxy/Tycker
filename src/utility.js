@@ -263,5 +263,6 @@ module.exports = {
 	parseName: parseName,
 	parseType: parseType,
 	parseStr: parseStr,
+	TypeEditor: TypeEditor,
 	Type: Type
 }

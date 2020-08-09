@@ -1,6 +1,6 @@
 "use strict"
 const reserved = require('./reserved');
-const {parseName, parseType, parseStr, Type} = require('./utility');
+const {parseName, parseType, parseStr, Type, TypeEditor} = require('./utility');
 /*
 .cast
 */
@@ -39,7 +39,7 @@ let wholeTypeMap = {
 		switch (typeof type) {
 			case 'string':
 				let parsed = parseName(type);
-				return this.isValid(parsed.name) && parsed.subtypes.every((el) => this.isValid(el));
+				return this.content.has(parsed.name) && parsed.subtypes.every((el) => this.isValid(el));
 			case 'object':
 				for (let t in type) {
 					if (!this.isValid(t)) return false;
