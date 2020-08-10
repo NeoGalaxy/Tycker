@@ -96,7 +96,7 @@ function scatter(str) {
 function parseName(str) {
 	if (typeof str != "string") return {name:str,subtypes:[]};
 	if (!/^[a-zA-Z]+ ?(< ?[a-zA-Z]+( ?, ?[a-zA-Z]+)* ?>)?$/.test(str)) 
-		throw new SyntaxError('Invalid type name');
+		throw new SyntaxError(`Invalid type name '${str}'`);
 	let splitted = str.replace(' ','').split('<');
 	return {
 		name : splitted[0],
@@ -150,8 +150,8 @@ function parseStr(str, getType) {
 				if ('' != state.last) throw new Error("unexpected",el);
 				let type = state.type;
 				let oldCheck = type.check;
-				state.type.check = function(el, ...args) {
-					return oldCheck.call(this, el, this.tycker.checkClone(type.subtypes, typeList), ...args);
+				state.type.check = function(el, tc, ...args) {
+					return oldCheck.call(this, el, tc.checkClone(type.subtypes, typeList), ...args);
 				}
 				state.last = '<>';
 				break;
@@ -203,10 +203,10 @@ function parseType(type, typeMap) {
 		});
 			
 		return new Type({
-			check : function (el) {
+			check : function (el,tc) {
 				return Array.isArray(el) 
 					&& el.length == type.length
-					&& type.every((t,i) => this.tycker(el[i], t));
+					&& type.every((t,i) => tc(el[i], t));
 			}
 		});
 	}
@@ -219,7 +219,7 @@ function parseType(type, typeMap) {
 		}
 		let ret = typeMap.get('object');
 		return new Type({
-			check : function (el) {
+			check : function (el,tc) {
 				if (typeof el != "object") return false;
 				for (let name in type) {
 					let propType = type[name];
@@ -227,7 +227,7 @@ function parseType(type, typeMap) {
 						name = name.slice(0,-1);
 						if (!el.hasOwnProperty(name)) continue;
 					}
-					if (!this.tycker(el[name], propType)) {
+					if (!tc(el[name], propType)) {
 						return false;
 					}
 				}

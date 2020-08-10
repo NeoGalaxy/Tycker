@@ -14,8 +14,6 @@ const Tycker = function(arg, type, exception) {
 	return Tycker.check(arg, type, exception); 
 }
 
-let methodList = ['find','isValid','def','match','check','clone','checkClone'];
-
 // Not called 'typeMap' to avoid errors from using typeMap instead of this.typeMap in methods
 let wholeTypeMap = {
 	content : new Map(),
@@ -38,8 +36,8 @@ let wholeTypeMap = {
 		if (type instanceof Type || type instanceof TypeEditor) return true;
 		switch (typeof type) {
 			case 'string':
-				let parsed = parseName(type);
-				return this.content.has(parsed.name) && parsed.subtypes.every((el) => this.isValid(el));
+				let parsedType = parseStr(type, (t) => this.get(t));
+				return true;
 			case 'object':
 				for (let t in type) {
 					if (!this.isValid(t)) return false;
@@ -132,7 +130,7 @@ let properties = {
 	},
 	match : function(el, matches, fallback) {
 		for (let config of matches) {
-			if (this.check(el, config.type, false, confing.cast == true))
+			if (this.check(el, config.type, false, config.cast == true))
 				return config.exe(el);
 		}
 		if (fallback instanceof Error) throw fallback;
@@ -153,6 +151,8 @@ let properties = {
 			throw new Error(`Should not occur. Please contact me.`);
 		}
 		if (castBefore) {
+			console.log('casting from',type)
+			console.log(typeObject)
 			let newArg = type.cast(arg, this);
 			if (newArg !== undefined) arg = newArg;
 		}
@@ -165,7 +165,7 @@ let properties = {
 		else return true
 	},
 	cast : function(arg, typeObject, exception = undefined) {
-		let type = parseType(typeObject);
+		let type = parseType(typeObject, this.typeMap);
 		return type.cast(arg,this,exception);
 	},
 	addCast : function(typename,cast,typecase = 'any') {
@@ -181,7 +181,7 @@ let properties = {
 			}
 			return newFunc.check(arg, type, exception); 
 		}
-		methodList.forEach((m) => newFunc[m] = this[m]);
+		Object.keys(this).forEach((m) => {if (typeof this[m] == 'function') newFunc[m] = this[m]});
 		newFunc.typeMap = this.typeMap.copy();
 		return newFunc;
 	},
