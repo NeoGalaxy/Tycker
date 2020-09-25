@@ -1,6 +1,6 @@
 const Tycker = require('../src/tc');
 
-const tests = ['1-checkingTypes','2-customTypes'];
+const tests = ['1-checkingTypes','2-customTypes','3-others'];
 
 success = true;
 for (tname of tests) {

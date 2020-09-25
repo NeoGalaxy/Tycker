@@ -190,13 +190,14 @@ let properties = {
 			))
 		}));
 	},
-	func : function(f, argsTypeDescr = 'array', retTypeDescr = 'any') {
+	func : function(argsTypeDescr = 'array', f, retTypeDescr = 'any') {
 		const argsType = parseType(argsTypeDescr, this);
 		const retType = parseType(retTypeDescr, this);
+		const tycker = this;
 		return function(...args) {
-			this.check(args, argsType, new Error('Le type des arguments est invalide.'));
+			tycker.check(args, argsType, new Error('Le type des arguments est invalide.'));
 			const ret = f.call(this, ...args);
-			this.check(ret, retType, new Error('Le type de retour est invalide.'));
+			tycker.check(ret, retType, new Error('Le type de retour est invalide.'));
 		}
 	},
 	match : function(element, matches, fallback) {

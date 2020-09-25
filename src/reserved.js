@@ -4,7 +4,7 @@ const reserved = {
 		'void' : {check:() => false},
 		'type' : {check:(el,tc) => tc.isValid(el)},
 		'unknown' : {check:() => {throw new Error('This type is unknown')}},
-		//'enum' : {check:(e,tc) => this.subtypes.some(t => tc(e,t))},
+		'int' : {check : (el) =>  Number.isInteger(el)},
 		'array' : {check : (el) => Array.isArray(el)},
 	/*** primitives and basic types ***/
 		'undefined' : 'undefined',
