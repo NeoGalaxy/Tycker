@@ -1,26 +1,8 @@
-function test(tycker, configList) {
-	let ret = true;
-	configList.forEach((conf) => {
-		if(conf.valids) conf.valids.forEach((el,i) => {
-			if(!tycker(el, conf.type)){
-				console.log('Assertion Failed.');
-				console.log(`+ type : ${conf.type}, index : ${i}`);
-				ret = false;
-			}
-		});
-		if(conf.invalids) conf.invalids.forEach((el,i) => {
-			if(tycker(el, conf.type)){
-				console.log('Assertion Failed.');
-				console.log(`- type : ${conf.type}, index : ${i}`);
-				ret = false;
-			}
-		});
-	});
-	return ret;
-}
+test = require('./tester')
 
 function main(Tycker) {
 	///////////////////// BuiltIn types /////////////////////
+	//test.alwaysUse = ['a'];
 	let success = test(Tycker, [
 		/*~~~ specific ~~~*/
 			{type : 'any', 

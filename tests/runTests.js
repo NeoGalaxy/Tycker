@@ -1,4 +1,3 @@
-const colors = require('colors');
 const Tycker = require('../src/tc');
 
 const tests = ['1-checkingTypes','2-customTypes'];

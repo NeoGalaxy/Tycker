@@ -1,3 +1,5 @@
+// Todo : change obj.hasOwnProperty to Object.hasOwnProperty.call(obj,...)
+// Todo : add prototype copy
 class TypeEditor {
 	constructor(type, tycker) {
 		if (typeof tycker != 'function') 
@@ -12,8 +14,8 @@ class TypeEditor {
 				self.check = checker;
 			} else {
 				let old = self.check;
-				self.check = function(el, arg2) {
-					return old.call(this, el, arg2) && checker.call(this, el, arg2);
+				self.check = function(...args) {
+					return old.call(this, ...args) && checker.call(this, ...args);
 				}
 			}
 		} else throw new TypeError('Checker should be a funtion.');
@@ -22,14 +24,12 @@ class TypeEditor {
 	check(el, exception = false, castBefore = false) {
 		return this.__tycker__.check(el, this.__type__, exception, castBefore);
 	}
-	addCast(arg1, arg2) {
-		let typeCase = arg2 ? arg1 : 'any';
-		let caster = arg2 ? arg2 : arg1;
-		this.__type__.addCast(caster,typeCase);
+	addCast(...args) {
+		this.__type__.addCast(this.__tycker__, ...args);
 		return this;
 	}
-	cast(el) {
-		return this.__type__.cast(el, this.__tycker__);
+	cast(el, exception) {
+		return this.__type__.cast(el, this.__tycker__,exception);
 	}
 }
 
@@ -44,6 +44,7 @@ class Type {
 				break;
 			case 'function': // Classes
 				this.check = (el) => el instanceof arg;
+				//this.casters = [(el) => new arg(el)];
 				break;
 			case 'object':
 				if (arg.hasOwnProperty('subtypes')) this.subtypes = arg.subtypes;
@@ -59,8 +60,13 @@ class Type {
 	editor(tycker) {
 		return new TypeEditor(this,tycker);
 	}
-	addCast(cast,type) {
+	addCast(tc,arg1,arg2) {
+		let type = arg2 ? arg1 : 'any';
+		let cast = arg2 ? arg2 : arg1;
+		tc(type, 'type', new TypeError('When adding cast: the specified type is invalid.'));
+		tc(cast, 'function', new TypeError('When adding cast: the cast function should be a function.'));
 		this.casters.push({type : type, func : cast});
+		return this;
 	}
 	cast(elem, tc, exception) {
 		let editor = this.editor(tc);
@@ -104,7 +110,7 @@ function parseName(str) {
 	}
 }
 
-function parseStr(str, getType) {
+function parseStr(str, tycker, getType) {
 	//let s = {global : 0, par : 1};
 	let state = {
 		inPar : false,
@@ -119,7 +125,13 @@ function parseStr(str, getType) {
 		let sEnum = state.enum;
 		state.enum = undefined;
 		state.type = new Type({
-			check : function(...args) {return sEnum.some(t => t.check(...args))}
+			check : (...args) => sEnum.some(t => t.check(...args))
+		})
+		if (tycker) state.type.addCast(tycker, (el,tc,...args) => {
+			for (type of sEnum) {
+				let ret = type.cast(el,tc,undefined);
+				if (ret != undefined) return ret;
+			}
 		});
 	};
 
@@ -166,19 +178,30 @@ function parseStr(str, getType) {
 				indexes = el.slice(1,-1).split(":");
 				// if (indexes.length > 2) throw new Error() // impossible case ?
 				let oldType = state.type;
-				let checker = 
-					/*  if  */  (indexes.length == 1) ? 
-					/* then */     (arr,tc) => tc(arr,'array') 
-					                           && (indexes[0] == '' || arr.length == indexes[0])
-					                           && arr.every(e => oldType.check(e)):
-					/* else */     (arr,tc) => tc(arr,'array') // length of 2
-					                           && (indexes[0] == '' || arr.length >= indexes[0]) 
-					                           && (indexes[1] == '' || arr.length <= indexes[1]) 
-					                           && arr.every(e => oldType.check(e));
-				state.type = new Type({check : checker});
+				//let checker = 
+				let tmp = new Type({
+					check:/*  if  */(indexes.length == 1) ? 
+					      /* then */   (arr,tc, ...args) => tc(arr,'array') 
+					                               && (indexes[0] == '' || arr.length == indexes[0])
+					                               && arr.every(e => oldType.check(e, tc, ...args)):
+					      /* else */   (arr,tc, ...args) => tc(arr,'array') // length of 2
+					                               && (indexes[0] == '' || arr.length >= indexes[0]) 
+					                               && (indexes[1] == '' || arr.length <= indexes[1]) 
+					                               && arr.every(e => oldType.check(e, tc, ...args))
+				})
+				if (tycker) tmp.addCast(tycker, 'any'+el, (el, tc) => {
+					let error = new Error()
+					try {
+						return el.map((e,i) => tmp.cast(e, tc, error));
+					} catch(e) {
+						if (e == error) return undefined;
+						else throw e;
+					}
+				});
+				state.type = tmp;
 				break;
 			default:
-				state.type = getType(el);
+				state.type = (getType) ? getType(el) : tycker.typeMap.get(el);
 				if (state.type == undefined) throw new Error(`The type ${el} does not exist.`)
 				break;
 		}
@@ -190,7 +213,7 @@ function parseStr(str, getType) {
 	return state.type;
 }
 
-function parseType(type, typeMap) {
+function parseType(type, tycker) {
 	if (type instanceof Type) {
 		return type;
 	}
@@ -199,7 +222,7 @@ function parseType(type, typeMap) {
 	}
 	if (Array.isArray(type)) {
 		type.forEach((e) => {
-			if (!typeMap.isValid(e)) throw new Error("The type '"+e+"' is not valid.");
+			if (!tycker.isValid(e)) throw new Error("The type '"+e+"' is not valid.");
 		});
 			
 		return new Type({
@@ -208,20 +231,29 @@ function parseType(type, typeMap) {
 					&& el.length == type.length
 					&& type.every((t,i) => tc(el[i], t));
 			}
+		}).addCast(tycker, `any[${type.length}]`, (el, tc) => {
+			let error = new Error()
+			try {
+				return type.map((t,i) => tc.cast(el[i], t, error));
+			} catch(e) {
+				if (e == error) return undefined;
+				else throw e;
+			}
 		});
 	}
 	if (typeof type == 'object') {
 		for (let k in type) {
-			if (!typeMap.isValid(type[k]))
+			if (!tycker.isValid(type[k]))
 				throw new Error("An value of the object is not a valid type.");
 			if (k.slice(-1) == '?' && type[k.slice(0,-1)] !== undefined)
 				throw new Error("A key is in double (optionnal and non-optionnal).");
 		}
-		let ret = typeMap.get('object');
+		let ret = tycker.typeMap.get('object');
 		return new Type({
 			check : function (el,tc) {
 				if (typeof el != "object") return false;
 				for (let name in type) {
+					if (name == '...') continue;
 					let propType = type[name];
 					if (name.slice(-1) == '?') {
 						name = name.slice(0,-1);
@@ -231,13 +263,29 @@ function parseType(type, typeMap) {
 						return false;
 					}
 				}
-				for (let key in el) {
-					if (!type.hasOwnProperty(key) && !type.hasOwnProperty(key+'?')) {
+				let remainType = type['...'] || 'void';
+				if (remainType != 'any') for (let key in el) {
+					if (!type.hasOwnProperty(key) && !type.hasOwnProperty(key+'?')
+					    && !tycker(el[key],remainType)) {
 						return false;
 					}
 				}
 				return true;
 			}
+		}).addCast(tycker, `object`, (el, tc) => {
+			let ret = {...el};
+			for (let key in type) {
+				if (key.slice(-1) == '?') {
+					key = key.slice(0,-1);
+					if (!el.hasOwnProperty(key)) {
+						continue;
+					}
+				}
+				let param = tc.cast(el[key], type[key], undefined);
+				if (param == undefined) return undefined;
+				ret[key] = param;
+			}
+			return ret;
 		});
 	}
 	if (typeof type == 'function') {
@@ -245,7 +293,7 @@ function parseType(type, typeMap) {
 	}
 	if (typeof type == 'string') {
 		try {
-			var res = parseStr(type, (t) => typeMap.get(t));
+			var res = parseStr(type, tycker);
 		} catch(e) {
 			console.log(e);
 			throw new Error("No type matching "+type);
@@ -256,7 +304,6 @@ function parseType(type, typeMap) {
 		return res;
 	}
 	throw new TypeError('Invalid type element.');
-	//return typeMap.get("any");
 }
 
 module.exports = {

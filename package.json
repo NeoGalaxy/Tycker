@@ -24,6 +24,5 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "colors": "^1.4.0"
   }
 }

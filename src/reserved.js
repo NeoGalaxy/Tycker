@@ -1,6 +1,8 @@
 const reserved = {
 	/********* specific types **********/
 		'any' : {check:() => true},
+		'void' : {check:() => false},
+		'type' : {check:(el,tc) => tc.isValid(el)},
 		'unknown' : {check:() => {throw new Error('This type is unknown')}},
 		//'enum' : {check:(e,tc) => this.subtypes.some(t => tc(e,t))},
 		'array' : {check : (el) => Array.isArray(el)},
