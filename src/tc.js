@@ -1,3 +1,4 @@
+// © NeoGalaxy, personnal use only.
 "use strict"
 const reserved = require('./reserved');
 const {parseName, parseType, parseStr, Type, TypeEditor} = require('./utility');

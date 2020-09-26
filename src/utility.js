@@ -1,3 +1,4 @@
+// © NeoGalaxy, personnal use only.
 // Todo : change obj.hasOwnProperty to Object.hasOwnProperty.call(obj,...)
 // Todo : add prototype copy
 class TypeEditor {
@@ -203,7 +204,7 @@ function parseStr(str, tycker, getType) {
 				break;
 			default:
 				state.type = (getType) ? getType(el) : tycker.typeMap.get(el);
-				if (state.type == undefined) throw new Error(`The type ${el} does not exist.`)
+				if (state.type == undefined) throw new Error(`The type ${el} does not exist.`);
 				break;
 		}
 	}

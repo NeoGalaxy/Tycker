@@ -1,3 +1,4 @@
+// © NeoGalaxy, personnal use only.
 const reserved = {
 	/********* specific types **********/
 		'any' : {check:() => true},

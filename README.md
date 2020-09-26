@@ -37,29 +37,28 @@ function add(arg1, arg2) {
 
 ### On Client-side
 
-The global variable `Tycker` will be set to the initial Tycker instance. So you can directly use `Tycker()`, `Tycker.match` ect…
+The global variable `Tycker` will be set to the initial Tycker instance. So you can directly use `Tycker()`, `Tycker.match` etc…
 
-See the [api]().
+See the [API]().
 
 ### Using NPM
 
 Simply import the module into a variable, and this variable will be the initial Tycker instance. So, to use the variable `Tycker` as the initial Tycker instance, you can simply do `const Tycker = require('Tycker')`.
 
-See [api]() for more on how to use a Tycker instance.
+See [API]() for more on how to use a Tycker instance.
 
 ## License
 
-#### TL;DR
+&copy; NeoGalaxy. Personal use only
 
-You have to contact me before using it. Otherwise, you can‘t copy, distribute, or modify this project (due to copyrights). You can try it on your own computer (have fun trying it), and don’t hesitate contacting me for any other use !
 
-#### Longer version
+You can use it personally, but you have to contact me before using it. If you don't contact me, you can‘t copy, distribute, or modify this project (but you can use it personally).  
+Have fun trying it, and don’t hesitate contacting me for any other use !
 
-This project has no license, and because of the copyright you can’t copy, distribute, or modify it. In other words, you can just use it on your own, to try it or have fun. As soon as you need to distribute it in order to use it, you need my permission.
+If the library gets popular, I will consider searching which license I'll put.
 
-Don’t worry, I’m quite friendly so feel free to ask me the permission. I mainly don’t want to give out my work to someone that would use it and make a lot of money without knowing.
+## How to contact me ?
 
-#### How to contact me ?
-
-Simply contact [me](https://github.com/NeoGalaxy) by e-mail telling me simply what you want to do with Tycker. You can give me your Discord if you prefer me to contact you over there. Also, fell free giving me feedback, advices, or anything else. 
+Simply contact [me](https://github.com/NeoGalaxy) by e-mail telling me what you want to do with Tycker. it doesn't have to be something fancy, and I'll answer quickly!!
+Fell free giving me any feedback, advices, or anything else. 
 
