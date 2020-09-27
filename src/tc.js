@@ -4,6 +4,15 @@ const {parseName, parseType, parseStr, Type, TypeEditor} = require('./utility');
 /*
 .cast
 */
+function pick(object, keys) {
+	return keys.reduce((obj, key) => {
+		if (object && object[key]) {
+			obj[key] = object[key];
+		}
+		return obj;
+	}, {});
+}
+
 const Tycker = function(arg, type, exception) {
 	if (arg === undefined && type === undefined && exception === undefined){
 		return Tycker.clone();
@@ -50,7 +59,7 @@ let wholeTypeMap = {
 			return this.defined.set(name, type);
 		if (this.override == 'inherited' && this.inherited.has(name)) 
 			return this.defined.set(name, type);
-		if (this.override == 'redefine' && this.defined.has(name)) 
+		if (this.override == 'defined' && this.defined.has(name)) 
 			return this.defined.set(name, type);
 		if (this.builtIn.has(name))
 			throw new Error('Type name used by a built-in type.');
@@ -60,16 +69,15 @@ let wholeTypeMap = {
 			throw new Error('Type name used by a defined type.');
 		return this.defined.set(name, type);
 	},
-	copy : function(canOverride = 'same') {
-		if (!['none','same','inherited','all'].includes(canOverride))
+	copy : function(canOverride = 'inherited') {
+		if (!['none','same','inherited', 'defined','all'].includes(canOverride))
 			throw new Error(`Invalid copying method. `
 				+ `'canOverride' (first arg) should be 'none', 'same', 'inherited' or 'all'.`);
 		
 		return {
-			//typeToName : new Map(this.typeToName), 
-			//nameToType : new Map(this.nameToType), 
 			builtIn : this.builtIn,
-			inherited : (canOverride == 'same') ? new Map(this.inherited) : new Map([...this.inherited, ...this.defined]),
+			inherited : (canOverride == 'same') ? new Map(this.inherited) : 
+			            	new Map([...this.inherited, ...this.defined]),
 			defined : (canOverride == 'same') ? new Map(this.defined) : new Map(),
 			get : this.get,
 			override : (canOverride == 'same') ? this.override : canOverride,
@@ -113,35 +121,25 @@ let properties = {
 		return this.typeMap.find(type);
 	},*/
 	get : function (type) {
-		return this.typeMap.get(type,true).editor(this);
+		let ret = this.typeMap.get(type,true) || parseType(type, this);
+		this.check(ret, 'type', new Error('Impossible to find type '+type));
+		return ret.editor(this);
+
 	},
 	isValid : function(type) {
 		return this.typeMap.isValid(type);
 	},
-	build : function(typeDescr, checker = undefined, casts = []) {
-		let type = parseType(typeDescr, this);
-		let editor = type.editor(this);
-		if (checker) editor = editor.setChecker(checker);
-		casts.forEach((c) => {
-			switch (typeof c) {
-				case 'function':
-					editor.addCast(c);
-					break;
-				case 'object':
-					editor.addCast(c.type,c.function);
-					break;
-				default:
-					throw new TypeError('The casts are not of valid type.');
-					break;
-			}
-		});
-		return editor;
-	},
-	def : function(completeName, typeDescr = 'any', checker = undefined, casts = []) {
-		let {name, subtypes} = parseName(completeName);
-		let type = parseType(typeDescr, this.checkClone(subtypes));
-		this.typeMap.set(name, type);
+	def : function(options) {
+		var {name, force, baseType, supers, checker, casts} = options;
+		if (casts == undefined) casts = [];
+		if (baseType == undefined) baseType = options.type || 'any';
+		if (supers == undefined) supers = [baseType];
+
+		let {typeName, subtypes} = parseName(name);
+		let type = parseType(baseType, this.checkClone(subtypes));
+		let superTypes = supers.map((t) => parseType(t, this.checkClone(subtypes)));
 		type.subtypes = subtypes;
+		
 		let editor = type.editor(this);
 		if (checker) editor = editor.setChecker(checker);
 		casts.forEach((c) => {
@@ -157,33 +155,54 @@ let properties = {
 					break;
 			}
 		});
+		if (typeof name == 'string' && name != '') 
+			this.typeMap.set(typeName, type, force);
 		return editor;
 	},
-	defs : function(types, temporary = []) {
+	defs : function(types, subtypes = []) {
 		let subTycker = this();
-		subTycker.def('tcDefStatement',{
+		subTycker.def({name : 'tcDefStatement', baseType : {
 			'name':'string',
-			'descr?':'type',
+			'force?':'boolean',
+			'baseType?':'type',
+			'supers?':'type[]',
 			'checker?':'function',
 			'overwriteChecker?':'boolean',
 			'casts?':'function[]'
-		});
+		}});
 		defList = subTycker.build('tcDefStatement[]').__type__;
-		this.check(types, defList, new TypeError('Cannot create types : types config file is invalid.'), true);
-		this.check(temporary, defList, new TypeError('Cannot create types : temporary types config file is invalid.'), true);
+		this.check(types, defList, 
+			new TypeError('Cannot create types : types config file is invalid.'), true);
+		this.check(subtypes, defList, 
+			new TypeError('Cannot create types : subtypes types config file is invalid.'), true);
 
 		subTycker = this();
 
 		////////  Registering  ////////
-		for (let conf of temporary) subTycker.def(conf.name);
-		for (let conf of types) subTycker.def(conf.name);
+		for (let conf of subtypes) subTycker.def({name : conf.name});
+		for (let conf of types) subTycker.def({name : conf.name});
 
-		subTycker = subTycker
+
+		return types.map((conf) => this.def({name: conf.name, type : // Def in the current tycker
+			subTycker.def(pick(conf, // Build from the tycker instance where everything is registered
+				['name','force','baseType','supers',
+				'checker','overwriteChecker','casts']
+			))
+		}));
 	},
-	match : function(el, matches, fallback) {
+	func : function(f, argsTypeDescr = 'array', retTypeDescr = 'any') {
+		const argsType = parseType(argsTypeDescr, this);
+		const retType = parseType(retTypeDescr, this);
+		return function(...args) {
+			this.check(args, argsType, new Error('Le type des arguments est invalide.'));
+			const ret = f.call(this, ...args);
+			this.check(ret, retType, new Error('Le type de retour est invalide.'));
+		}
+	},
+	match : function(element, matches, fallback) {
 		for (let config of matches) {
-			if (this.check(el, config.type, false, config.cast == true))
-				return config.exe(el);
+			if (this.check(element, config.type, false, config.cast == true))
+				return config.exe(element);
 		}
 		if (fallback instanceof Error) throw fallback;
 		return fallback;
@@ -196,7 +215,6 @@ let properties = {
 			throw new Error('Unable to find type or create anonymous type from above object');
 		}
 		let self = {}
-		//if (!type) type = this.typeMap(typeName);
 		if (type == undefined) {
 			throw new Error(`Should not occur. Please contact me.`);
 		}

@@ -11,17 +11,18 @@ function check(tc, el, type, expected, index) {
 function test(tycker, configList) {
 	let ret = true;
 	for (let conf of configList) {
+		const type = tycker(conf.type);
 		let remaining = new Set(test.alwaysUse);
 		if(conf.valids) conf.valids.forEach((el,i) => {
-			ret &= check(tycker,el,conf.type,true,i);
+			ret &= check(tycker,el,type,true,i);
 			remaining.delete(el)
 		});
 		if(conf.invalids) conf.invalids.forEach((el,i) => {
-			ret &= check(tycker,el,conf.type,false,i);
+			ret &= check(tycker,el,type,false,i);
 			remaining.delete(el);
 		});
 		remaining.forEach((el) => {
-			ret &= check(tycker,el,conf.type,conf.remain || false);
+			ret &= check(tycker,el,type,conf.remain || false);
 			remaining.delete(el);
 		});
 	};

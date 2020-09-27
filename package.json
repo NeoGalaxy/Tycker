@@ -1,7 +1,7 @@
 {
-  "name": "tycker",
-  "version": "0.2.1",
-  "description": "A dynamic and complete type checker",
+  "name": "@neogalaxy/tycker",
+  "version": "0.3.0",
+  "description": "Next level run-time type-checking.",
   "main": "src/tc.js",
   "scripts": {
     "build": "webpack",
@@ -9,20 +9,25 @@
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/NeoGalaxy/Tycker"
   },
   "keywords": [
     "type",
+    "typing",
     "check",
-    "help"
+    "run-time",
+    "client-side",
+    "front-end"
   ],
   "author": "Gwennan Eliezer",
   "license": "UNLICENSED",
   "devDependencies": {
-    "path": "^0.12.7",
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12"
   },
-  "dependencies": {
+  "dependencies": {},
+  "directories": {
+    "lib": "lib",
+    "test": "tests"
   }
 }

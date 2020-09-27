@@ -104,12 +104,12 @@ function main(Tycker) {
 	]);
 
 	///////////////////// Custom types /////////////////////
-	Tycker.def('stru', {
+	Tycker.def({name:'stru', baseType:{
 	  x:'string',
 	  y:'number',
 	  'z?':'boolean',
 	  'a?':'any'
-	});
+	}});
 
 	success = success && test(Tycker, [
 		{type:'stru', 

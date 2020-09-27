@@ -85,7 +85,7 @@ class Type {
 }
 
 function scatter(str) {
-	let regex = / *([a-zA-Z]+|\(|\)|<[a-zA-Z]+(,[a-zA-Z]+)*>|\[(\d*(:(\d*)?)?)?\]|\|) */g;
+	let regex = / *([a-zA-Z]+|\(|\)|<([a-zA-Z]+( *, *[a-zA-Z]+)*)?>|\[(\d*(:(\d*)?)?)?\]|\|) */g;
 	/* possibilities : 
 	 - alphabetical word (To improve)
 	 - left parenthesis
@@ -100,12 +100,12 @@ function scatter(str) {
 }
 
 function parseName(str) {
-	if (typeof str != "string") return {name:str,subtypes:[]};
+	if (typeof str != "string") return {name:'',subtypes:[]};
 	if (!/^[a-zA-Z]+ ?(< ?[a-zA-Z]+( ?, ?[a-zA-Z]+)* ?>)?$/.test(str)) 
 		throw new SyntaxError(`Invalid type name '${str}'`);
 	let splitted = str.replace(' ','').split('<');
 	return {
-		name : splitted[0],
+		typeName : splitted[0] ? splitted[0] : undefined,
 		subtypes : splitted[1] ? splitted[1].slice(0,-1).split(',') : []
 	}
 }
@@ -158,7 +158,8 @@ function parseStr(str, tycker, getType) {
 				break;
 			case ('<'):
 				// There should be a type litteral before
-				let typeList = el.slice(1,-1).split(",");
+				let typeList = el.slice(1,-1).split(",").map(s=>s.trim());
+				if (typeList[0] == '' && typeList.length == 1) typeList = [];
 				if ('' != state.last) throw new Error("unexpected",el);
 				let type = state.type;
 				let oldCheck = type.check;
@@ -295,7 +296,6 @@ function parseType(type, tycker) {
 		try {
 			var res = parseStr(type, tycker);
 		} catch(e) {
-			console.log(e);
 			throw new Error("No type matching "+type);
 		}
 		if (res == undefined) {
