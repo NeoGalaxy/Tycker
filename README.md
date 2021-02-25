@@ -1,8 +1,10 @@
-# Tycker
-
-*Next level run-time type-checking.*
+![](https://repository-images.githubusercontent.com/298915037/eb940900-77b7-11eb-90ea-28c117011ec3)
 
 **Version** : 0.3.1 (Pre-Alpha)
+
+# Tycker 
+
+*Next level run-time type-checking.*
 
 Tycker is a JavaScript run-time type checker who’s purpose is to allow complicated type checking. It has several built-in types, supports creating highly customizable types, checking if a variable matches to a given type and executing code depending on the given type. The goal is to make type checking easy to write and to read. Here is an example of usage :  
 
