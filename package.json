@@ -1,5 +1,5 @@
 {
-  "name": "@neogalaxy/tycker",
+  "name": "tycker",
   "version": "0.3.0",
   "description": "Next level run-time type-checking.",
   "main": "src/tc.js",

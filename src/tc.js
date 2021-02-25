@@ -209,7 +209,7 @@ let properties = {
 		if (fallback instanceof Error) throw fallback;
 		return fallback;
 	},
-	check : function(arg, typeObject, exception = false, castBefore = false){
+	check : function(element, typeObject, exception = false, castBefore = false){
 		let type = parseType(typeObject, this);
 		//let typeName = undefined;
 		//let subtypes = [];
@@ -221,10 +221,10 @@ let properties = {
 			throw new Error(`Should not occur. Please contact me.`);
 		}
 		if (castBefore) {
-			let newArg = type.cast(arg, this);
-			if (newArg !== undefined) arg = newArg;
+			let newEl = type.cast(element, this);
+			if (newEl !== undefined) element = newEl;
 		}
-		if (!type.check.call(type.editor(this),arg,this)) {
+		if (!type.check.call(type.editor(this),element,this)) {
 			if (exception instanceof Error){
 				throw exception;
 			}

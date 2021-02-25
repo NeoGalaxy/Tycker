@@ -4,34 +4,48 @@
 
 **Version** : 0.3.0 (Pre-Alpha)
 
-Tycker is a JavaScript run-time type checker who’s purpose is to facilitate type checking. It has several built-in types, supports creating highly customizable types, checking if a variable matches to a given type and executing code depending on the given type. The goal is to make type checking easy to write and to read. Here is an example of usage :  
+Tycker is a JavaScript run-time type checker who’s purpose is to allow complicated type checking. It has several built-in types, supports creating highly customizable types, checking if a variable matches to a given type and executing code depending on the given type. The goal is to make type checking easy to write and to read. Here is an example of usage :  
 
 ```js
-function add(arg1, arg2) {
-    Tycker.match([arg1,arg2],[
+Tycker.def({name:'even', baseType:'number', checker: n => n%2 == 0});
+Tycker.def({name:'propObject',baseType:{
+    name: 'string',
+    'id?': 'number',
+    value : 'bigint'
+}});
+Tycker.def({name:'prop',baseType:'even | even[2] | propObject'});
+
+// Defining a function that should take a property as argument and return 
+// an even number as output
+var parseProp = Tycker.func('prop', prop => {
+    Tycker.match(prop,[
         {
-        	type : Array[2],
-			execute : () => arg1.concat(arg2)
+        	type : 'even',
+			exe : n => n
         },{
-            type : ["myType","any"],
-            execute : () => {arg1.content.push(arg2)}
+            type : 'number[2]',
+            exe : array => 2*(array[0]+array[1])
         },{
-            type : ["number | string","number | string"],
-            execute : () => arg1 + arg2
+            type : "propObject",
+            exe : () => arg1 + arg2
         }
     ],new TypeError("The arguments should be both arrays, objects, numbers or string."));
-}
+}, );
 ```
 
-/!\ You can use this project, but not distribute it and/or modify it. Check out the [licensing](#Licence) /!\ 
-
-### Table of contents
-
-[TOC]
+/!\ You can use this project, but not distribute it and/or modify it. Check out the [licensing](#License) /!\ 
 
 ## Installation
 
-*Work in progress*
+On a website, in order to use the library on the client side, you just have to import it within your wesite using a `<script>` tag:
+
+```html
+<script type="text/javascript" src="https://raw.githubusercontent.com/NeoGalaxy/Tycker/master/lib/tycker.js"></script>
+```
+
+On a server side using Node.js, just install the package: `npm i --save Tycker`.
+
+> Note : I have not performance-tested the library yet, don't expect too much.
 
 ## Usage
 
@@ -39,13 +53,13 @@ function add(arg1, arg2) {
 
 The global variable `Tycker` will be set to the initial Tycker instance. So you can directly use `Tycker()`, `Tycker.match` etc…
 
-See the [API]().
+See the [API](https://github.com/NeoGalaxy/Tycker/wiki).
 
-### Using NPM
+### In Node.js
 
-Simply import the module into a variable, and this variable will be the initial Tycker instance. So, to use the variable `Tycker` as the initial Tycker instance, you can simply do `const Tycker = require('Tycker')`.
+By `require`ing the library, you'll get the inital Tycker instance. So, to put Tycker in the variable `Tycker`, you can simply do `const Tycker = require('Tycker')`.
 
-See [API]() for more on how to use a Tycker instance.
+See [API](https://github.com/NeoGalaxy/Tycker/wiki) for more on how to use a Tycker instance.
 
 ## License
 
