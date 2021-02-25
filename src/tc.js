@@ -40,13 +40,25 @@ let wholeTypeMap = {
 	},
 	isValid : function(type) {
 		if (type instanceof Type || type instanceof TypeEditor) return true;
+		if (Array.isArray(type)) {
+			for (let val of type) {
+				if (!this.isValid(val)) return false;
+			}
+			return true;
+		}
 		switch (typeof type) {
 			case 'string':
-				let parsedType = parseStr(type, null, (t) => this.get(t));
+				try {
+					parseStr(type, null, (t) => this.get(t));
+				} catch(e) {
+					return false;
+				}
 				return true;
 			case 'object':
-				for (let t in type) {
-					if (!this.isValid(t)) return false;
+				for (let key in type) {
+					if (key.slice(-1) == '?' && type[key.slice(0,-1)] !== undefined)
+						return false;
+					if (!this.isValid(type[keyey])) return false;
 				}
 				return true;
 			case 'function': // Assumed to be a class
@@ -132,6 +144,7 @@ let properties = {
 	},
 	def : function(options) {
 		var {name, force, baseType, supers, checker, casts} = options;
+		// Unused : supers
 		if (casts == undefined) casts = [];
 		if (baseType == undefined) baseType = options.type || 'any';
 		if (supers == undefined) supers = [baseType];
@@ -159,37 +172,6 @@ let properties = {
 		if (typeof name == 'string' && name != '') 
 			this.typeMap.set(typeName, type, force);
 		return editor;
-	},
-	defs : function(types, subtypes = []) {
-		let subTycker = this();
-		subTycker.def({name : 'tcDefStatement', baseType : {
-			'name':'string',
-			'force?':'boolean',
-			'baseType?':'type',
-			'supers?':'type[]',
-			'checker?':'function',
-			'overwriteChecker?':'boolean',
-			'casts?':'function[]'
-		}});
-		defList = subTycker.build('tcDefStatement[]').__type__;
-		this.check(types, defList, 
-			new TypeError('Cannot create types : types config file is invalid.'), true);
-		this.check(subtypes, defList, 
-			new TypeError('Cannot create types : subtypes types config file is invalid.'), true);
-
-		subTycker = this();
-
-		////////  Registering  ////////
-		for (let conf of subtypes) subTycker.def({name : conf.name});
-		for (let conf of types) subTycker.def({name : conf.name});
-
-
-		return types.map((conf) => this.def({name: conf.name, type : // Def in the current tycker
-			subTycker.def(pick(conf, // Build from the tycker instance where everything is registered
-				['name','force','baseType','supers',
-				'checker','overwriteChecker','casts']
-			))
-		}));
 	},
 	func : function(argsTypeDescr = 'array', f, retTypeDescr = 'any') {
 		const argsType = parseType(argsTypeDescr, this);

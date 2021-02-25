@@ -96,7 +96,7 @@ function scatter(str) {
 	 - a vertical line
 	*/
 	let match = str.match(regex);
-	if (match.join("") != str) throw new Error("The string contains invalid characters.");
+	if (match == null || match.join("") != str) throw new Error("The string contains invalid characters.");
 	return match.map(s=>s.trim());
 }
 

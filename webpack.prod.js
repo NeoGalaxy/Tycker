@@ -1,11 +1,11 @@
 var path = require('path');
 
 module.exports = {
-  mode: 'development',
+  mode: 'production',
   entry: './src/tc.js',
   output: {
     path: path.resolve(__dirname, 'lib'),
-    filename: 'tycker.debug.js',
+    filename: 'tycker.js',
     library: 'Tycker',
     libraryTarget: 'var'
   }

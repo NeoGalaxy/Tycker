@@ -4,7 +4,8 @@
   "description": "Next level run-time type-checking.",
   "main": "src/tc.js",
   "scripts": {
-    "build": "webpack",
+    "make": "webpack .",
+    "build": "webpack -p --config webpack.prod.js",
     "test": "node ./tests/runTests.js"
   },
   "repository": {
