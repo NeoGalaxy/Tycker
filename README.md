@@ -9,30 +9,37 @@
 Tycker is a JavaScript run-time type checker who’s purpose is to allow complicated type checking. It has several built-in types, supports creating highly customizable types, checking if a variable matches to a given type and executing code depending on the given type. The goal is to make type checking easy to write and to read. Here is an example of usage :  
 
 ```js
+// Defines the type "even" which recognises any even number
 Tycker.def({name:'even', baseType:'number', checker: n => n%2 == 0});
+
+// Defines a type which should be an object with its attributes 'name' being a string,
+// 'value' being a bigint and 'id' being optionnal and being a number
 Tycker.def({name:'propObject',baseType:{
     name: 'string',
     'id?': 'number',
     value : 'bigint'
 }});
+
+// Defines a type named 'prop' being an even number, 
+// an array of 2 even numbers or the type we've just defined above
 Tycker.def({name:'prop',baseType:'even | even[2] | propObject'});
 
-// Defining a function that should take a property as argument and return 
-// an even number as output
+// Defining a function that should take a parameter of type 'prop' 
+// and should give an even number as output
 var parseProp = Tycker.func('prop', prop => {
     Tycker.match(prop,[
         {
-        	type : 'even',
+        	type : 'even',                   // If prop is even, return it as it is
 			exe : n => n
         },{
-            type : 'number[2]',
-            exe : array => 2*(array[0]+array[1])
+            type : 'number[2]',                  // If prop is an array of 2 elements, 
+            exe : array => 2*(array[0]+array[1]) // return the double of their sum
         },{
-            type : "propObject",
-            exe : () => arg1 + arg2
+            type : "propObject",                 // If it is a propObject, return its value
+            exe : obj => obj.value
         }
     ],new TypeError("The arguments should be both arrays, objects, numbers or string."));
-}, );
+}, 'even');
 ```
 
 /!\ You can use this project, but not distribute it and/or modify it. Check out the [licensing](#License) /!\ 
@@ -68,7 +75,7 @@ See [API](https://github.com/NeoGalaxy/Tycker/wiki) for more on how to use a Tyc
 &copy; NeoGalaxy. Personal use only
 
 
-You can use it personally, but you have to contact me before using it. If you don't contact me, you can‘t copy, distribute, or modify this project (but you can use it personally).  
+You can use it personally, but you have to contact me before using it. Without my authorization, you can‘t copy, distribute, or modify this project (but you can use it personally).  
 Have fun trying it, and don’t hesitate contacting me for any other use !
 
 If the library gets popular, I will consider searching which license I'll put.
